@@ -1,8 +1,10 @@
 import requests
 from datetime import datetime
+import sqlite3
 import telebot
 from telebot import types
 from auth_data import token
+
 
 
 def telegram_bot(token) :
@@ -12,10 +14,43 @@ def telegram_bot(token) :
 	def start_message(message) :
 		# Main menu of bot where you choose action
 		bot.send_message(message.chat.id , "📈Состояние популярной криптовалюты\n👉Введи : price .\n\n💵Курс валют\n👉Введи : money .\n\n🔎Полная версия биржи.\n👉Введи : /site ")
-	
+
+
+		# First of all Create your Database, I used SQLITE3
+		# Connenct to database
+		connect = sqlite3.connect ('C:\\Users\\Maxim\\Desktop\\telegram.db', check_same_thread= False) # path to database
+		cursor = connect.cursor()
+		# Create table users
+		cursor.execute("""CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY ,user_id INTEGER, first_name TEXT, last_name TEXT, user_name TEXT)""")
+		connect.commit()
+		#connect.close()
+		# select only uniqueness users
+		check_id = message.chat.id
+		cursor.execute(f"SELECT user_id FROM users WHERE user_id = {check_id}")
+		data = cursor.fetchone()
+		# if there is no match than add user to the table
+		if data is None :
+			# add values to the table
+			user_id = message.chat.id
+			first_name = message.chat.first_name
+			last_name = message.chat.last_name
+			user_name = message.chat.username
+			cursor.execute('INSERT INTO users (user_id, first_name, last_name, user_name) VALUES(?,?,?,?);', (user_id, first_name, last_name, user_name))
+			connect.commit()
+		else :
+			pass	
+
+		
+
+
+
+
+
+
+
 	@bot.message_handler(commands = ['site'])
 	def url(message):
-		#Buttons for hrefs of the full version of sites
+		# Buttons for hrefs of the full version of sites
 		markup = types.InlineKeyboardMarkup()
 		btn_site= types.InlineKeyboardButton(text='Yobit.net', url='http://yobit.net/ru/')
 		markup.add(btn_site)
