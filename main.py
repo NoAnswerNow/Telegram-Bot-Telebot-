@@ -7,14 +7,17 @@ from auth_data import token
 
 
 
+
 def telegram_bot(token) :
 	bot = telebot.TeleBot(token) # get your token from auth_data
 
 	@bot.message_handler(commands=["start"])
 	def start_message(message) :
 		# Main menu of bot where you choose action
-		bot.send_message(message.chat.id , "📈Состояние популярной криптовалюты\n👉Введи : price .\n\n💵Курс валют\n👉Введи : money .\n\n🔎Полная версия биржи.\n👉Введи : /site ")
-
+		bot.send_message(message.chat.id , "📈Состояние популярной криптовалюты\n👉Введи : price .\n\n💵Курс валют\n👉Введи : money .\n\
+			                                \n🔎Полная версия биржи.\n👉Введи : /site\n\
+			                                \n💱Конвертер валют\nПеревести доллары в гривны.\n👉Введи : /ua\n\
+			                                 \nПеревести гривны в доллары.\n👉Введи : /us")
 
 		# First of all Create your Database, I used SQLITE3
 		# Connenct to database
@@ -38,16 +41,59 @@ def telegram_bot(token) :
 			cursor.execute('INSERT INTO users (user_id, first_name, last_name, user_name) VALUES(?,?,?,?);', (user_id, first_name, last_name, user_name))
 			connect.commit()
 		else :
-			pass	
+			pass
 
-		
+	# Currency converter		
+	# Сonvert dollars(USD) to hryvnia(UAH)		
+	@bot.message_handler(commands=['ua'])
+	def echo_usd_ua(message):
+		msg_usd = bot.reply_to(message, "Введите сумму в долларах (USD) :")
+		bot.register_next_step_handler(msg_usd, convert_usd_ua) #remember user input
 
+	def convert_usd_ua(message):	
+		try :
+			user_cash_usd = message.text
+			# check that the user has entered a number
+			if not user_cash_usd.isdigit():
+				msg_usd = bot.reply_to(message, "Введите число. Например, 100, 150, 200 , 253 ...")
+				bot.register_next_step_handler(msg_usd, convert_usd_ua)
+				return
+			req = requests.get("https://api.privatbank.ua/p24api/pubinfo?json&exchange&coursid=5")
+			response = req.json()
+			price = response[0]
+			rate_usd = float(price['buy']) # convert value of rate from str to float
+			user_cash_usd = float(message.text) # convert message from str to float
+			result_usd = rate_usd * user_cash_usd # get the result
+			bot.send_message(message.chat.id , f" ➡️ {result_usd} грв (UAH)\n ( Курс ПриватБанка)\n{datetime.now().strftime('%Y-%m-%d %H:%M')}✅")
+		except Exception as e :
+			bot.reply_to(message, "Что-то не так")
 
+     # Сonvert hryvnia(UAH) to dollars(USD)
+	@bot.message_handler(commands=['us'])
+	def echo_ua_usd(message):
+		msg_ua = bot.reply_to(message, "Введите сумму в гривнах (UAH) :")
+		bot.register_next_step_handler(msg_ua, convert_ua_usd)
 
+	def convert_ua_usd(message):	
+		try :
+			user_cash_ua = message.text
+			if not user_cash_ua.isdigit():
+				msg_ua = bot.reply_to(message, "Введите число. Например, 100, 150, 200 , 253 ...")
+				bot.register_next_step_handler(msg_ua, convert_ua_usd)
+				return
+			req = requests.get("https://api.privatbank.ua/p24api/pubinfo?json&exchange&coursid=5")
+			response = req.json()
+			price = response[0]
+			rate_usd = float(price['sale']) # convert value of rate from str to float
+			user_cash_ua = float(message.text) # convert message from str to float
+			result_ua = user_cash_ua/rate_usd
+			bot.send_message(message.chat.id , f" ➡️ {result_ua} у.е (USD)\n ( Курс ПриватБанка)\n{datetime.now().strftime('%Y-%m-%d %H:%M')}✅")
+		except Exception as e :
+			bot.reply_to(message, "Что-то не так")		
+	
+			
 
-
-
-
+	
 	@bot.message_handler(commands = ['site'])
 	def url(message):
 		# Buttons for hrefs of the full version of sites
@@ -142,12 +188,12 @@ def telegram_bot(token) :
 					message.chat.id,
 					"☠️☠️☠️Не твой день, с курсом что-то не то, минфин взломан, пакуй чемоданы☠️☠️☠️"
 				)
-
-
 		else :
-			bot.send_message(message.chat.id, "🤦‍♂️🚬Там что-то не ясно написано? Price, Money, /site... Попробуй еще, мы верим в тебя... ")
+			bot.send_message(message.chat.id, "🤦‍♂️🚬Там что-то не ясно написано? Price, Money, /site, /ua, /us... Попробуй еще, мы верим в тебя... ")
 
-								
+	
+
+
 
 	bot.polling()		
 
